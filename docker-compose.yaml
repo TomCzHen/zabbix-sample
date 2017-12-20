@@ -1,0 +1,53 @@
+version: "3.3"
+services:
+  zabbix-server:
+    image: zabbix/zabbix-server-pgsql:alpine-latest
+    container_name: zabbix-server
+    restart: unless-stopped
+    ports:
+      - "10051:10051"
+    environment:
+      - DB_SERVER_HOST=zabbix-db
+    depends_on:
+      - zabbix-db
+      - zabbix-web
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ${ZABBIX_SERVER_ROOT}/alertscripts:/usr/lib/zabbix/alertscripts:ro
+      - ${ZABBIX_SERVER_ROOT}/externalscripts:/usr/lib/zabbix/externalscripts:ro
+      - ${ZABBIX_SERVER_ROOT}/enc:/var/lib/zabbix/enc:ro
+      - ${ZABBIX_SERVER_ROOT}/modules:/var/lib/zabbix/modules:ro 
+      - ${ZABBIX_SERVER_ROOT}/ssh_keys:/var/lib/zabbix/ssh_keys:ro
+      - ${ZABBIX_SERVER_ROOT}/mibs:/var/lib/zabbix/mibs:ro
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-latest
+    container_name: zabbix-web
+    restart: unless-stopped
+    environment:
+      - DB_SERVER_HOST=zabbix-db
+      - PHP_TZ=Asia/Shanghai
+    ports:
+      - "8001:80"
+
+  zabbix-agent:
+    image: zabbix/zabbix-agent:alpine-latest
+    container_name: zabbix-agent
+    restart: unless-stopped
+    environment:
+      - ZBX_SERVER_HOST=zabbix-server
+    depends_on:
+      - zabbix-server
+
+
+  zabbix-db:
+    image: postgres:9.6.5-alpine
+    container_name: zabbix-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=zabbix
+      - POSTGRES_PASSWORD=zabbix
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${ZABBIX_DB_ROOT}:/var/lib/postgresql/data
